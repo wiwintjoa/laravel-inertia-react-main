@@ -1,113 +1,188 @@
-import React, { useState } from 'react';
-import { usePage, router } from '@inertiajs/react';
-import DataTable from 'react-data-table-component';
-import PrimaryButton from '@/Components/PrimaryButton';
-import {InputText} from "primereact/inputtext";
+import React, { useState, useMemo, useEffect } from "react";
+import { usePage, router } from "@inertiajs/react";
+import DataTable from "react-data-table-component";
+import SecondaryButton from "@/Components/SecondaryButton";
+import DangerButton from "@/Components/DangerButton";
+import FilterComponent from "./FilterComponent";
+import { Dialog } from 'primereact/dialog';
 
 const SearchForm = ({ handleEditClick }) => {
-  const page = usePage(); // Get full page object
+    const page = usePage(); // Get full page object
 
-  const companies = page.props.companies || [];
-  const filters = page.props.filters || {};
+    const companies = page.props.companies || [];
 
-  const [search, setSearch] = useState(filters.search || '');
+    const [pending, setPending] = useState(true);
+    const [confirmingDeletion, setConfirmingDeletion] = useState(false);
+    const [rows, setRows] = useState([]);
 
-  const handleFilter = (e) => {
-    e.preventDefault();
-    router.get(route('companies.index'), {
-      search
-    }, {
-      preserveState: true,
-      preserveScroll: true,
+    const [filterText, setFilterText] = useState('');
+    const [resetPaginationToggle, setResetPaginationToggle] = useState(false);
+    const filters = companies.data.filter(
+        (item) => item.name?.toLowerCase().includes(filterText.toLowerCase())
+    );
+    const [companyToDelete, setCompanyToDelete] = useState(null);
+
+    const [pagination, setPagination] = useState({
+        page: companies.current_page,
+        perPage: companies.per_page,
     });
-  };
 
-  const handleDelete = async (id) => {
-    router.delete(`/companies/${id}`, {
-      onSuccess: () => router.reload({ preserveState: true }),
-    });
-  };
+    const handlePageChange = (page, totalRows) => {
+        router.get(
+            route('companies'),
+            { page, perPage: pagination.perPage, q: filterText },
+            { preserveScroll: true }
+        );
+    };
 
-  const columns = [
-    { name: 'Name', selector: row => row.name, sortable: true },
-    { name: 'Email', selector: row => row.email },
-    { name: 'Phone', selector: row => row.phone },
-    { name: 'Postcode', selector: row => row.postcode },
-    { name: 'City', selector: row => row.city },
-    { name: 'Prefecture', selector: row => row.prefecture?.name || '-' },
-    { name: 'Local', selector: row => row.local },
-    { name: 'Street Address', selector: row => row.street_address },
-    { name: 'Business Hour', selector: row => row.business_hour },
-    { name: 'Regular Holiday', selector: row => row.regular_holiday },
+    const handlePerRowsChange = (newPerPage, page) => {
+        router.get(
+            route('companies'),
+            { page, perPage: newPerPage, q: filterText },
+            { preserveScroll: true }
+        );
+    };
 
-    {
-      name: 'Actions',
-      cell: row => (
-        <>
-           <button onClick={() => handleEditClick(row)}>Edit</button>
-          <button onClick={() => handleDelete(row.id)}>Delete</button>
-        </>
-      ),
-    },
-  ];
 
-  return (
-      <div className='max-w-xl'>
-          <header>
-              <h2 className="text-lg font-medium">Company Information</h2>
+    const subHeaderComponentMemo = useMemo(() => {
+        const handleClear = () => {
+            if (filterText) {
+                setResetPaginationToggle(!resetPaginationToggle);
+                setFilterText("");
+            }
+        };
+        return (
+            <FilterComponent
+                onFilter={(e) => setFilterText(e.target.value)}
+                onClear={handleClear}
+                filterText={filterText}
+            />
+        );
+    }, [filterText, resetPaginationToggle]);
 
-              <p className="mt-1 text-sm text-gray-600">
-                  Search company profile based on search criteria.
-              </p>
-          </header>
+    const DialogHeaderContent = (
+        <h2 className="text-lg font-medium text-gray-900 pl-4 pt-2 mb-0">
+            Are you sure you want to delete this record?
+        </h2>
+    );
 
-          <div className='col-sm-12 mt-2'>
-              <div className="card">
-                <form onSubmit={handleFilter} className="formgrid grid mb-4">
-                  <div className="field col-12 md:col-4">
-                    <label htmlFor="search">Search Name</label>
-                    <InputText
-                      id="search"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search name, city ..."
-                    />
-                  </div>
+    const handleDeleteClick = (id) => {
+        setCompanyToDelete(id);         // store ID to use later
+        setConfirmingDeletion(true);    // open the dialog
+    };
 
-                  <div className="col-12 text-left mt-2">
-                    <PrimaryButton label="Apply Filters" icon="pi pi-filter" severity="primary" type="submit" />
-                  </div>
-                </form>
 
-                <div className='card'>
-                  <DataTable
-                      columns={columns}
-                      data={companies.data}
-                      pagination
-                      paginationServer
-                      paginationTotalRows={companies.total}
-                      paginationPerPage={companies.per_page}
-                      paginationDefaultPage={companies.current_page}
-                      highlightOnHover
-                      dense
+   const deleteCompany = (e) => {
+        e.preventDefault();
+
+        if (!companyToDelete) return;
+
+        router.delete(route("companies.destroy", companyToDelete), {
+            onSuccess: () => {
+            closeModal();
+            },
+        });
+    };
+
+
+    const closeModal = () => {
+        setConfirmingDeletion(false);
+        setCompanyToDelete(null); 
+    };
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setRows(filters);
+            setPending(false);
+        }, 2000);
+        return () => clearTimeout(timeout);
+    }, []);
+
+    const columns = [
+        {
+            name: "Name",
+            selector: (row) => row.name,
+            sortable: true,
+        },
+        {
+            name: "Email",
+            selector: (row) => row.email,
+            sortable: true,
+        },
+        {
+            name: "Postcode",
+            selector: (row) => row.postcode,
+        },
+        {
+            name: "Actions",
+            cell: (row) => (
+              <div className="flex gap-2">
+                  <SecondaryButton
+                    icon="pi pi-pencil"
+                    severity="warning"
+                    title="Edit company"
+                    onClick={() => handleEditClick(row)} // `row` is company data
                   />
-                </div>
+                  <DangerButton
+                    icon="pi pi-trash"
+                    severity="danger"
+                    title="Delete company"
+                    onClick={() => handleDeleteClick(row.id)}
+                  />
               </div>
+            ),
+            ignoreRowClick: true, // Prevent row click from interfering
+            allowOverflow: true, // Ensure button is visible if column is narrow
+            button: true, // Indicates it's a button column
+        },
+    ];
 
-              {/* <div className='col-sm-12'>
-                <div className="mb-4 text-left">
-                    <PrimaryButton label="Create Company" icon="pi pi-plus" severity="success" onClick={() => router.get(route('companies.create'))} />
-                </div>   
+    return (
+        <div className="max-w-xl">
+            <header>
+                <h2 className="text-lg font-medium">Company Information</h2>
 
-                <div className="card">
-                    
-                </div>
-              </div>         */}
-          </div>
+                <p className="mt-1 mb-3 text-sm text-gray-600">
+                    Search company profile based on search criteria.
+                </p>
+            </header>
 
-          
-      </div>
-  );
+            <div className="card">
+                <DataTable
+                    columns={columns}
+                    data={filters}
+                    progressPending={pending}
+                    pagination
+                    paginationServer
+                    paginationTotalRows={companies.total}
+                    paginationPerPage={companies.per_page}
+                    paginationDefaultPage={companies.current_page}
+                    onChangePage={handlePageChange}
+                    onChangeRowsPerPage={handlePerRowsChange}
+                    paginationResetDefaultPage={resetPaginationToggle}
+                    subHeader
+                    subHeaderComponent={subHeaderComponentMemo}
+                    persistTableHead 
+                    highlightOnHover
+                    dense
+                />
+            </div>
+
+
+            <Dialog className="px-6" header={DialogHeaderContent} visible={confirmingDeletion} style={{ width: '50vw' }}  onHide={() => setConfirmingDeletion(false)}>
+                <form onSubmit={deleteCompany} className="px-4">
+                    <div className="mt-6 flex justify-end">
+                        <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton>
+
+                        <DangerButton className="ml-3">
+                            Delete
+                        </DangerButton>
+                    </div>
+                </form>
+            </Dialog>
+
+        </div>
+    );
 };
 
 export default SearchForm;
