@@ -1,3 +1,9 @@
+/** 
+ *This is company main page 
+ *Create by Wiwin
+ *On: 07-Jul-2025 
+*/
+
 import React, { useState } from "react";
 import { Head, usePage } from "@inertiajs/react";
 import Layout from "@/Layouts/layout/layout.jsx";
@@ -13,17 +19,30 @@ export default function Index() {
     const [showCreate, setShowCreate] = useState(false);
     const [scrollToForm, setScrollToForm] = useState(false);
     const [editCompany, setEditCompany] = useState(null);
+    const [loadingForm, setLoadingForm] = useState(false);
 
     const handleCreateClick = () => {
         setEditCompany(null); // clear edit state
-        setShowCreate(true);
-        setScrollToForm(true);
+        setLoadingForm(true);
+
+        setTimeout(() => {
+            setShowCreate(true);
+            setLoadingForm(false);
+            setScrollToForm(true);
+        }, 300); 
     };
 
     const handleEditClick = (company) => {
-        setShowCreate(false);
+        setShowCreate(false); // make sure create form is closed
+        setEditCompany(null); // close EditForm first
+        setLoadingForm(true);
         setScrollToForm(true);
-        setEditCompany(company); // set company to edit
+        
+        // Wait to unmount EditForm before opening with new company
+        setTimeout(() => {
+            setEditCompany({ ...company }); // force fresh object for reactivity
+            setLoadingForm(false);
+        }, 300);
     };
 
     const resetScrollToForm = () => {
@@ -39,7 +58,7 @@ export default function Index() {
     return (
         <Layout>
             <Head title="Company" />
-
+    
             <div className="grid">
                 <div className="col-12">
                     <div className="card">
@@ -56,6 +75,12 @@ export default function Index() {
                             }
                             
                         </div>
+
+                         {loadingForm && (
+                            <div className="flex justify-content-center my-4">
+                                <i className="pi pi-spin pi-spinner text-4xl text-primary"></i>
+                            </div>
+                        )}
 
                         {(showCreate && !editCompany) && (
                             <CreateForm

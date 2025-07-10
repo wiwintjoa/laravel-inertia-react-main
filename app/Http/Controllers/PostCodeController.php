@@ -1,4 +1,8 @@
 <?php
+/**  Post code controller to maintain post code request
+ *   Created by Wiwin
+ *   07-Jul-2025
+*/
 
 namespace App\Http\Controllers;
 
@@ -8,7 +12,6 @@ use Inertia\Inertia;
 
 class PostCodeController extends Controller
 {
-    //
     public function lookup(Request $request)
     {
         $request->validate([

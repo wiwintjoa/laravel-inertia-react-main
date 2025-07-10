@@ -1,11 +1,18 @@
+/**
+ *This is used for edit company page
+ *Create by Wiwin
+ *On: 09-Jul-2025
+ */
+
 import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "@inertiajs/react";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { Dropdown } from 'primereact/dropdown';
+import { Dropdown } from "primereact/dropdown";
 import InputError from "@/Components/InputError";
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
+import { lookupPostcode } from "@/Utils/postCodeLookUp";
 
 export default function EditForm({
     company,
@@ -17,12 +24,14 @@ export default function EditForm({
     const [searching, setSearching] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    const { data, setData, put, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset } = useForm({
         name: company.name || "",
         email: company.email || "",
         phone: company.phone || "",
         postcode: company.postcode || "",
-        prefecture_id: company.prefecture_id ? Number(company.prefecture_id) : null,
+        prefecture_id: company.prefecture_id
+            ? Number(company.prefecture_id)
+            : null,
         prefecture: company.prefecture?.display_name || "",
         city: company.city || "",
         local: company.local || "",
@@ -42,7 +51,9 @@ export default function EditForm({
                 email: company.email || "",
                 phone: company.phone || "",
                 postcode: company.postcode || "",
-                prefecture_id: company.prefecture_id ? Number(company.prefecture_id) : null,
+                prefecture_id: company.prefecture_id
+                    ? Number(company.prefecture_id)
+                    : null,
                 prefecture: company.prefecture?.display_name || "",
                 city: company.city || "",
                 local: company.local || "",
@@ -79,36 +90,13 @@ export default function EditForm({
         setSearching(true);
 
         try {
-            const response = await fetch("/postcode-lookup", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector(
-                        'meta[name="csrf-token"]'
-                    ).content,
-                },
-                body: JSON.stringify({ postcode: data.postcode }),
-            });
+            const result = await lookupPostcode(data.postcode, prefectures);
 
-            const result = await response.json();
-
-            const matchedPref = prefectures.find(
-                (p) =>
-                    p.name === result.prefecture ||
-                    p.display_name === result.prefecture
-            );
-            const prefectureId = matchedPref ? matchedPref.id : "";
-
-            if (response.ok) {
-                setData({
-                    ...data,
-                    prefecture: result.prefecture,
-                    city: result.city,
-                    local: result.local,
-                    prefecture_id: prefectureId,
-                });
-            } else {
-                console.error("Lookup failed:", result.message);
+            if (result) {
+                setData("prefecture", result.prefecture);
+                setData("prefecture_id", result.prefecture_id);
+                setData("city", result.city);
+                setData("local", result.local);
             }
         } catch (error) {
             console.error("Error during fetch:", error);
@@ -122,19 +110,17 @@ export default function EditForm({
 
         const payload = { ...data };
 
-         // If no new file selected, remove image field
-        if (!data.image || typeof data.image === 'string') {
-            delete payload.image;
-        }
+        // Laravel needs _method to simulate PUT
+        payload._method = 'PUT';
 
-        if (payload.prefecture_id === null) {
-            delete payload.prefecture_id;
-        }
-
-        put(route("companies.update", company.id), {
+        post(route("companies.update", company.id), {
             data: payload,
-            onSuccess: () => onClose && onClose(),
+            forceFormData: true, // ensures multipart/form-data is used
+            onSuccess: () => {
+                if (onClose) onClose();
+            },
         });
+
     };
 
     return (
@@ -210,28 +196,32 @@ export default function EditForm({
                     </div>
 
                     <div className="mb-3">
-                         <label
-                             htmlFor="prefecture"
-                             className="block text-900 font-medium mb-2"
-                         >
-                           Prefecture
-                         </label>
+                        <label
+                            htmlFor="prefecture"
+                            className="block text-900 font-medium mb-2"
+                        >
+                            Prefecture
+                        </label>
 
-                         <Dropdown
+                        <Dropdown
                             dataKey="id"
                             value={data.prefecture_id}
                             onChange={(e) =>
                                 setData("prefecture_id", e.target.value)
                             }
-                             options={prefectures}
-                             optionValue="id" 
-                             optionLabel="display_name" 
-                             placeholder="Select a Prefecture"
-                             className={`w-full md:w-14rem ${errors.prefecture_id ? 'p-invalid border-red-500' : ''}`}
-                             showClear
-                         />
-                         <InputError message={errors.prefecture_id} />
-                     </div>
+                            options={prefectures}
+                            optionValue="id"
+                            optionLabel="display_name"
+                            placeholder="Select a Prefecture"
+                            className={`w-full md:w-14rem ${
+                                errors.prefecture_id
+                                    ? "p-invalid border-red-500"
+                                    : ""
+                            }`}
+                            showClear
+                        />
+                        <InputError message={errors.prefecture_id} />
+                    </div>
 
                     <div className="mb-3">
                         <label
@@ -316,14 +306,14 @@ export default function EditForm({
                         >
                             Regular Holiday
                         </label>
-                        
+
                         <InputTextarea
                             id="regular_holiday"
                             value={data.regular_holiday}
                             onChange={(e) =>
                                 setData("regular_holiday", e.target.value)
                             }
-                            rows={5} 
+                            rows={5}
                             cols={30}
                         />
 
@@ -346,7 +336,7 @@ export default function EditForm({
                             onChange={(e) => setData("phone", e.target.value)}
                         />
                         <InputError message={errors.phone} />
-                    </div>                    
+                    </div>
 
                     <div className="mb-3">
                         <label
@@ -382,7 +372,7 @@ export default function EditForm({
                             onChange={(e) => setData("url", e.target.value)}
                         />
                         <InputError message={errors.url} />
-                    </div>                   
+                    </div>
 
                     <div className="mb-3">
                         <label
@@ -420,7 +410,8 @@ export default function EditForm({
 
                                 if (file) {
                                     const img = new Image();
-                                    img.src = URL.createObjectURL(file);
+                                    const objectUrl = URL.createObjectURL(file);
+                                    img.src = objectUrl;
 
                                     img.onload = () => {
                                         if (
@@ -432,10 +423,18 @@ export default function EditForm({
                                             );
                                             setData("image", null);
                                             setPreviewUrl(null);
+                                            URL.revokeObjectURL(objectUrl); // Clean up
                                         } else {
                                             setData("image", file);
                                             setPreviewUrl(img.src);
                                         }
+                                    };
+
+                                    img.onerror = () => {
+                                        alert("Invalid image file.");
+                                        setData("image", null);
+                                        setPreviewUrl(null);
+                                        URL.revokeObjectURL(objectUrl);
                                     };
                                 }
                             }}

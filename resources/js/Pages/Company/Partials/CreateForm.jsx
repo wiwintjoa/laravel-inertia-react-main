@@ -1,11 +1,17 @@
+/**
+ *This is used for create company page
+ *Create by Wiwin
+ *On: 08-Jul-2025
+ */
 import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "@inertiajs/react";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { Dropdown } from 'primereact/dropdown';
+import { Dropdown } from "primereact/dropdown";
 import InputError from "@/Components/InputError";
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
+import { lookupPostcode } from "@/Utils/postCodeLookUp";
 
 export default function CreateForm({
     onClose,
@@ -15,6 +21,7 @@ export default function CreateForm({
 }) {
     const [searching, setSearching] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(null);
+    //Initialize company data
     const { data, setData, post, processing, errors, reset } = useForm({
         name: "",
         email: "",
@@ -33,6 +40,7 @@ export default function CreateForm({
         license_number: "",
     });
 
+    // when button craete triggered it scroll to create form
     const formRef = useRef(null);
 
     useEffect(() => {
@@ -42,47 +50,29 @@ export default function CreateForm({
         }
     }, [scrollToForm, resetScrollToForm]);
 
+    // Reset the image
     useEffect(() => {
         return () => {
             reset("image");
         };
     }, []);
 
+    // Call post code lookup to get prefectures, city and local data
     const handleSearchPostCode = async (e) => {
         e.preventDefault();
         setSearching(true);
 
         try {
-            const response = await fetch("/postcode-lookup", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector(
-                        'meta[name="csrf-token"]'
-                    ).content,
-                },
-                body: JSON.stringify({ postcode: data.postcode }),
-            });
+            const result = await lookupPostcode(data.postcode, prefectures);
 
-            const result = await response.json();
-
-            const matchedPref = prefectures.find(
-                (p) =>
-                    p.name === result.prefecture ||
-                    p.display_name === result.prefecture
-            );
-            const prefectureId = matchedPref ? matchedPref.id : "";
-
-            if (response.ok) {
+            if (result) {
                 setData({
                     ...data,
                     prefecture: result.prefecture,
+                    prefecture_id: result.prefecture_id,
                     city: result.city,
                     local: result.local,
-                    prefecture_id: prefectureId,
                 });
-            } else {
-                console.error("Lookup failed:", result.message);
             }
         } catch (error) {
             console.error("Error during fetch:", error);
@@ -91,16 +81,20 @@ export default function CreateForm({
         }
     };
 
+    // Create company and call save or store on controller
     const submit = (e) => {
         e.preventDefault();
+        
         post(route("companies.store"), {
             forceFormData: true,
             onSuccess: () => {
-                if (onClose) onClose(); // Close the form after successful submission
+                // Close the form after successful submission
+                if (onClose) onClose();
             },
         });
     };
 
+    // Displaying input control
     return (
         <div className="max-w-xl" ref={formRef}>
             <div className="surface-card p-6 sm:p-4 shadow-2 border-round w-full">
@@ -173,7 +167,7 @@ export default function CreateForm({
                         />
                     </div>
 
-                     <input
+                    <input
                         type="hidden"
                         name="prefecture_id"
                         value={data.prefecture_id}
@@ -184,7 +178,7 @@ export default function CreateForm({
                             htmlFor="prefecture"
                             className="block text-900 font-medium mb-2"
                         >
-                          Prefecture
+                            Prefecture
                         </label>
 
                         <Dropdown
@@ -193,10 +187,14 @@ export default function CreateForm({
                                 setData("prefecture_id", e.target.value)
                             }
                             options={prefectures}
-                            optionValue="id" 
-                            optionLabel="display_name" 
+                            optionValue="id"
+                            optionLabel="display_name"
                             placeholder="Select a Prefecture"
-                            className={`w-full md:w-14rem ${errors.prefecture_id ? 'p-invalid border-red-500' : ''}`}
+                            className={`w-full md:w-14rem ${
+                                errors.prefecture_id
+                                    ? "p-invalid border-red-500"
+                                    : ""
+                            }`}
                             showClear
                         />
 

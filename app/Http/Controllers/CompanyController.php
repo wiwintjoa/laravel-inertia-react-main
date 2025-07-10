@@ -1,5 +1,8 @@
 <?php
-
+/**  Comnpany controller to maintain company request
+ *   Created by Wiwin
+ *   07-Jul-2025
+*/
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -55,15 +58,6 @@ class CompanyController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-        return Inertia::render('Company/CreateForm');
-    }
-
-    /**
      * Store a newly created company in storage.
      */
     public function store(Request $request)
@@ -97,37 +91,6 @@ class CompanyController extends Controller
 
         return redirect()->route('companies')
             ->with('success', 'Company created successfully!');
-    }
-
-    /**
-     * Show the form for editing the specified company.
-     */
-    public function edit(string $id)
-    {
-        //
-        $company = Company::findOrFail($id);
-
-        return Inertia::render('Company/EditForm', [
-            'company' => [
-                'id' => $company->id,
-                'name' => $company->name,
-                'email' => $company->email,
-                'phone' => $company->phone,
-                'postcode' => $company->postcode,
-                'prefecture_id' => $company->prefecture_id,
-                'prefecture' => $company->prefecture,
-                'city' => $company->city,
-                'local' => $company->local,
-                'street_address' => $company->street_address,
-                'business_hour' => $company->business_hour,
-                'regular_holiday' => $company->regular_holiday,
-                'fax' => $company->fax,
-                'url' => $company->url,
-                'license_number' => $company->license_number,
-                'image' => $company->image,
-                'image_url' => $company->image ? asset('storage/' . $company->image) : null,
-            ]
-        ]);
     }
 
     /**

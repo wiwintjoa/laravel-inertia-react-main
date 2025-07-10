@@ -1,3 +1,9 @@
+/** 
+ *This is company grid to list company data
+ *Create by Wiwin
+ *On: 07-Jul-2025 
+*/
+
 import React, { useState, useMemo, useEffect } from "react";
 import { usePage, router } from "@inertiajs/react";
 import DataTable from "react-data-table-component";
@@ -43,7 +49,7 @@ const SearchForm = ({ handleEditClick }) => {
         );
     };
 
-
+    // Handle search text
     const subHeaderComponentMemo = useMemo(() => {
         const handleClear = () => {
             if (filterText) {
@@ -84,7 +90,6 @@ const SearchForm = ({ handleEditClick }) => {
         });
     };
 
-
     const closeModal = () => {
         setConfirmingDeletion(false);
         setCompanyToDelete(null); 
@@ -121,7 +126,9 @@ const SearchForm = ({ handleEditClick }) => {
                     icon="pi pi-pencil"
                     severity="warning"
                     title="Edit company"
-                    onClick={() => handleEditClick(row)} // `row` is company data
+                    onClick={() => 
+                        handleEditClick(row) // `row` is company data
+                    } 
                   />
                   <DangerButton
                     icon="pi pi-trash"
@@ -147,6 +154,7 @@ const SearchForm = ({ handleEditClick }) => {
                 </p>
             </header>
 
+            {/* use data table to display company list */}
             <div className="card">
                 <DataTable
                     columns={columns}
@@ -168,7 +176,7 @@ const SearchForm = ({ handleEditClick }) => {
                 />
             </div>
 
-
+            {/* Pop up modal to display delete confirmation */}
             <Dialog className="px-6" header={DialogHeaderContent} visible={confirmingDeletion} style={{ width: '50vw' }}  onHide={() => setConfirmingDeletion(false)}>
                 <form onSubmit={deleteCompany} className="px-4">
                     <div className="mt-6 flex justify-end">
